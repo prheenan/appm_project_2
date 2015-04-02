@@ -1,3 +1,10 @@
+# patrick
+.DS_*
+.hg/*
+tmp/*
+out/*
+*~
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
