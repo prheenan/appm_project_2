@@ -17,7 +17,7 @@ import PlotUtilities as pPlotUtil
 import CheckpointUtilities as pCheckUtil
 
 def getRandomDNA(chars,dnaLen,numToChoose,weights):
-    rawArr = np.random.choice(chars,size=(numToChoose,dnaLen))
+    rawArr = np.random.choice(chars,size=(numToChoose,dnaLen), p=weights)
     # POST: rawArr[i][j] has character [j] of dna string [i] 
     # (ie: each row is a string)
     # combine all the columns in a given row for the actual strings
