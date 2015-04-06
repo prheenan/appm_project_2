@@ -67,7 +67,9 @@ def findKmers(sequence,seqComplement):
         kNotFound = max(notFoundS1,notFoundS2)
         # keep arrK at -1 if either sequences don't have the K yet.
         kmer += 1
-    return kmer,saveKs
+    # go up to but not including the kmer we found; this gets up the last 
+    # k for which we had more than one k-mer in the sequence
+    return kmer,saveKs[:kmer-1,:,:]
 
 if __name__ == '__main__':
 
@@ -80,5 +82,6 @@ if __name__ == '__main__':
                             getProportions,False,sequence,seqComplement)
     printProportions(baseProps)
     # lazy way of making the sequence circularized
-    minK = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
-                                    False,sequence,seqComplement)
+    kmer,saveKs = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
+                                           False,sequence,seqComplement)
+
