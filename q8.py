@@ -15,7 +15,7 @@ sys.path.append(path)
 import GenUtilities  as pGenUtil
 import PlotUtilities as pPlotUtil
 import CheckpointUtilities as pCheckUtil
-from collections import Counter
+from util import getMinKIdxAndCount
 
 def getRandomDNA(chars,dnaLen,numToChoose,weights):
     rawArr = np.random.choice(chars,size=(numToChoose,dnaLen),p=weights)
@@ -23,39 +23,6 @@ def getRandomDNA(chars,dnaLen,numToChoose,weights):
     # (ie: each row is a string)
     # combine all the columns in a given row for the actual strings
     return np.array([ "".join(r) for r in rawArr],dtype=np.object)
-def getKmers(string,k):
-    return [ string[i:i+k] for i in range(0,len(string)-k+1)]
-    
-def getMinKIdxAndCount(seqs,kmer,goodIdx,kNotFoundNum,printProgress=True):
-    working = seqs[goodIdx]
-    # transform the dna into their kmers. Use a counter structure, 
-    # which is much faster. it stored the unique elements and counts
-# see: https://docs.python.org/2/library/collections.html#collections.Counter
-    counters = map(lambda x: Counter(getKmers(x,kmer)),working)
-    # get the set of each of the kmers, using the unique set of the counters
-# see: https://docs.python.org/2/library/collections.html#collections.Counter
-    kmerSet = map(lambda c: set(c.elements()),counters)
-    # For each counter, get all its elements (most common defaults to n)
-    # and record the count (second element, first index)
-# see: https://docs.python.org/2/library/collections.html#collections.Counter
-    kmerCounts = [ map(lambda x: x[1],counters[i].most_common()) \
-                   for i,tmpSet in enumerate(kmerSet) ]
-    # maximum count (ie: the maximum number of times *any* kmer happens
-    # this needs to be 1 to find the appropriate value...
-    maxCount = map(max,kmerCounts)
-    # get the index where the max was one (ie: at most 1 of the kmers)
-    bestIdx = [ goodIdx[i] for i,c in enumerate(maxCount)  if c<=1]
-    # update the bookkeeping stuff
-    kNotFoundNum = goodIdx.size
-    meanMaxOccur = np.mean(maxCount)
-    if (printProgress):
-        print("GetMinK: {:d} seqs left, average max of {:.1f} {:d}-mers".
-              format(kNotFoundNum,meanMaxOccur,kmer))
-        maxIdx = map(np.argmax,kmerCounts)
-        print("\t Example sequence:" + str(list(kmerSet[0])[maxIdx[0]]).lower())
-        print("\t Appearances (#) :" + str(maxCount[0]))
-    kmer += 1
-    return kmer,kNotFoundNum,bestIdx,meanMaxOccur
 
 def getMinK(seqs,printProgress=False):
     # get the minimum integer k such that each -mer occurs once in each of seqs
@@ -67,8 +34,8 @@ def getMinK(seqs,printProgress=False):
     goodIdx =np.where(arrK < 0)[0]
     kmer = 1
     while (kNotFoundNum > 0):
-        kmer,kNotFoundNum,bestIdx,xx = getMinKIdxAndCount(seqs,kmer,goodIdx,\
-                    kNotFoundNum,printProgress)
+        kmer,kNotFoundNum,bestIdx = getMinKIdxAndCount(seqs,kmer,goodIdx,
+                                                       printProgress)
         arrK[bestIdx] = kmer
         goodIdx =np.where(arrK < 0)[0]
     return arrK
@@ -94,14 +61,15 @@ def plotAll(kArrs,outDir):
     for i,k in enumerate(kArrs):
         fig = pPlotUtil.figure()
         plt.hist(k,bins=bins,align='left',label='Data from {:d} sequences'.
-                 format(int(numOligos)))
+                 format(int(numOligos)),normed=True)
         mean = means[i]
         plt.axvline(mean,color='r',label="Mean:{:.3f}".format(mean),
                     linewidth=2.0)
         plt.xlim([0,maxK])
-        plt.xlabel('K, minimum k-mer with at most 1 occurence in DNA')
-        plt.ylabel('Number of occurences')
-        plt.title('K histogram for a dna of length {:d}'.format(lengths[i]))
+        plt.xlabel('K, minimum k-mer with at most 1 occurence in DNA sequence')
+        plt.ylabel('Proportion of occurences')
+        plt.title('K histogram (normalized) for DNA sequences  of length {:d}'.
+                  format(lengths[i]))
         plt.legend()
         pPlotUtil.savefig(fig,outDir + "k{:d}".format(i))
     return means,stdevs
@@ -150,12 +118,11 @@ if __name__ == '__main__':
     kArr = pCheckUtil.getCheckpoint('./tmp/check.pkl',getKSequence,forceRun,
                                     lengths,numOligos,weights,chars)
     meanVals,std = pCheckUtil.getCheckpoint('./tmp/meanStd.pkl',plotAll,
-                                            forceRun,kArr,outDir)
+                                            True,kArr,outDir)
     if (test):
         testDnaGeneration(chars,lengths,numOligos,weights)
     # plot the mean k vs dna length, l (in theory, k is approx log_1/q(l+1))
     fig = pPlotUtil.figure()
-    topTwo = sum(sorted(weights)[::-1][:2])
     ax = plt.subplot(1,3,1)
     plt.errorbar(x=lengths,y=meanVals,yerr=std,fmt='ro-',label='Mean K')
     tKVals = getTheoryK(lengths,q)
@@ -175,7 +142,4 @@ if __name__ == '__main__':
 
 
     pPlotUtil.savefig(fig,outDir + 'k_v_len')
-'''
-plt.plot(lengths,getTheoryK(lengths,topTwo),'b--',
-         label='Log_[1/minP](l+1)')
-'''
+

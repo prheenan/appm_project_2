@@ -15,7 +15,7 @@ sys.path.append(path)
 import GenUtilities  as pGenUtil
 import PlotUtilities as pPlotUtil
 import CheckpointUtilities as pCheckUtil
-from q8 import getMinKIdxAndCount
+from util import getMinKIdxAndCount
 
 baseDict = {'A':'T',
             'T':'A',
@@ -42,26 +42,26 @@ def printProportions(baseProps):
 
 def findKmers(sequence,seqComplement):
     kmer = 1
-    circular = lambda seq ,k: seq[-(k-1):] + seq + seq[:(k-1)] if k > 1 else seq
+    circular = lambda seq ,k: seq + seq[:(k-1)] if k > 1 else seq
     goodIdx =np.array([0])
-    kNotFoundNum = 1
+    kNotFound = 1
     avgKmerCountS1 = []
     avgKmerCountS2 = []
-    while (kNotFoundNum >0):
+    while (kNotFound >0):
         s1 = circular(sequence,kmer)
         s2 = circular(seqComplement,kmer)
         # need to pass an array to minK..
         xx,notFoundS1,xx2,numAppearS1 = getMinKIdxAndCount([[s1]],kmer,
-                                               goodIdx,kNotFoundNum)
-        xx,notFoundS2,xx2,numAppearS2 = getMinKIdxAndCount([[s2]],kmer,
-                                                         goodIdx,kNotFoundNum)
+                                               goodIdx,kNotFound)
+      #  xx,notFoundS2,xx2,numAppearS2 = getMinKIdxAndCount([[s2]],kmer,
+      #                                                   goodIdx,kNotFound)
         # continue going until both the forward and reverse sequences satistfy
-        avgKmerCountS1.append(numAppearS1)
-        avgKmerCountS2.append(numAppearS2)
-        kNotFound = max(notFoundS1,notFoundS2)
+      #  avgKmerCountS1.append(numAppearS1)
+      #  avgKmerCountS2.append(numAppearS2)
+        kNotFound = notFoundS1# max(notFoundS1,notFoundS2)
         # keep arrK at -1 if either sequences don't have the K yet.
         kmer += 1
-    return minK,np.array(avgKmerCountS1),np.array(avgKmerCountS2)
+    return kmer,np.array(avgKmerCountS1),np.array(avgKmerCountS2)
 
 if __name__ == '__main__':
 
