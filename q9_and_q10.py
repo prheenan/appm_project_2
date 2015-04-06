@@ -50,8 +50,6 @@ def findKmers(sequence,seqComplement):
     while (kNotFoundNum >0):
         s1 = circular(sequence,kmer)
         s2 = circular(seqComplement,kmer)
-        print(len(s1))
-        print(len(s2))
         # need to pass an array to minK..
         xx,notFoundS1,xx2,numAppearS1 = getMinKIdxAndCount([[s1]],kmer,
                                                goodIdx,kNotFoundNum)
