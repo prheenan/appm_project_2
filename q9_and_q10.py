@@ -47,21 +47,27 @@ def findKmers(sequence,seqComplement):
     kNotFound = 1
     avgKmerCountS1 = []
     avgKmerCountS2 = []
+    # kmers to save each round
+    topKmers = 10
+    # maximum numbers of rounds to save
+    maxK = 300
+    # for each round [i] and both sequences [j],  store the top kmers [k]
+    saveKs = np.empty((maxK,2,topKmers),dtype=np.object)
     while (kNotFound >0):
         s1 = circular(sequence,kmer)
         s2 = circular(seqComplement,kmer)
         # need to pass an array to minK..
-        xx,notFoundS1,xx2,numAppearS1 = getMinKIdxAndCount([[s1]],kmer,
-                                               goodIdx,kNotFound)
-      #  xx,notFoundS2,xx2,numAppearS2 = getMinKIdxAndCount([[s2]],kmer,
-      #                                                   goodIdx,kNotFound)
+        xx,notFoundS1,xx,commonKmers1 = getMinKIdxAndCount([[s1]],kmer,goodIdx,
+                                                          topKmers)
+        xx,notFoundS2,xx,commonKmers2 = getMinKIdxAndCount([[s2]],kmer,goodIdx,
+                                                          topKmers)
+        saveKs[kmer-1,0,:min(topKmers,len(commonKmers1))] = commonKmers1
+        saveKs[kmer-1,1,:min(topKmers,len(commonKmers2))] = commonKmers2
         # continue going until both the forward and reverse sequences satistfy
-      #  avgKmerCountS1.append(numAppearS1)
-      #  avgKmerCountS2.append(numAppearS2)
-        kNotFound = notFoundS1# max(notFoundS1,notFoundS2)
+        kNotFound = max(notFoundS1,notFoundS2)
         # keep arrK at -1 if either sequences don't have the K yet.
         kmer += 1
-    return kmer,np.array(avgKmerCountS1),np.array(avgKmerCountS2)
+    return kmer,saveKs
 
 if __name__ == '__main__':
 
@@ -75,4 +81,4 @@ if __name__ == '__main__':
     printProportions(baseProps)
     # lazy way of making the sequence circularized
     minK = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
-                                    True,sequence,seqComplement)
+                                    False,sequence,seqComplement)

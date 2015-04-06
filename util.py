@@ -33,7 +33,7 @@ def getMinKIdxAndCount(seqs,kmer,goodIdx,returnKmers=None,printProgress=True):
         print("GetMinK: {:d} seqs left, average max of {:.1f} {:d}-mers".
               format(kNotFoundNum,np.mean(maxCount),kmer))
     kmer += 1
-    if (returnKmers is not None):
+    if (returnKmers is None):
         return kmer,kNotFoundNum,bestIdx
     else:
         # also return the data the the 'returnKmers' most common ones.
