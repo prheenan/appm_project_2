@@ -16,6 +16,8 @@ import GenUtilities  as pGenUtil
 import PlotUtilities as pPlotUtil
 import CheckpointUtilities as pCheckUtil
 from util import getMinKIdxAndCount
+from mpl_toolkits.mplot3d import Axes3D
+
 
 baseDict = {'A':'T',
             'T':'A',
@@ -40,20 +42,25 @@ def printProportions(baseProps):
         print("The proportion of {:s} is {:.4f}".format(base,proportion))
     print('\tSums to... {:.5f} == 1 (I hope!)'.format(sum(baseProps)))
 
-def findKmers(sequence,seqComplement):
-    kmer = 1
+def findKmers(sequence,seqComplement,topKmers=10):
+    kmer = 0
     circular = lambda seq ,k: seq + seq[:(k-1)] if k > 1 else seq
     goodIdx =np.array([0])
     kNotFound = 1
     avgKmerCountS1 = []
     avgKmerCountS2 = []
     # kmers to save each round
-    topKmers = 10
     # maximum numbers of rounds to save
     maxK = 300
     # for each round [i] and both sequences [j],  store the top kmers [k]
-    saveKs = np.empty((maxK,2,topKmers),dtype=np.object)
+    saveKCounts = np.ones((maxK,2,topKmers),dtype=np.uint64) * -1
+    saveKStrs = np.empty((maxK,2,topKmers),dtype=np.object)
+    # little lambda functions to make populating things easier
+    realLen = lambda arr: min(topKmers,len(arr))
+    toStr = lambda arr: [ x[0] for x in arr ]
+    toCount = lambda arr: [ x[1] for x in arr]
     while (kNotFound >0):
+        kmer += 1
         s1 = circular(sequence,kmer)
         s2 = circular(seqComplement,kmer)
         # need to pass an array to minK..
@@ -61,18 +68,22 @@ def findKmers(sequence,seqComplement):
                                                           topKmers)
         xx,notFoundS2,xx,commonKmers2 = getMinKIdxAndCount([[s2]],kmer,goodIdx,
                                                           topKmers)
-        saveKs[kmer-1,0,:min(topKmers,len(commonKmers1))] = commonKmers1
-        saveKs[kmer-1,1,:min(topKmers,len(commonKmers2))] = commonKmers2
+        idx = kmer-1
+        saveKCounts[idx,0,:realLen(commonKmers1)] = toCount(commonKmers1)
+        saveKCounts[idx,1,:realLen(commonKmers2)] = toCount(commonKmers2)
+        # save the actual strings
+        saveKStrs[idx,0,:realLen(commonKmers1)] = toStr(commonKmers1)
+        saveKStrs[idx,1,:realLen(commonKmers2)] = toStr(commonKmers2)
         # continue going until both the forward and reverse sequences satistfy
         kNotFound = max(notFoundS1,notFoundS2)
         # keep arrK at -1 if either sequences don't have the K yet.
-        kmer += 1
+    # POST: kmer is the minimum k such that no k-mer appears more than once
     # go up to but not including the kmer we found; this gets up the last 
     # k for which we had more than one k-mer in the sequence
-    return kmer,saveKs[:kmer-1,:,:]
+    return kmer,saveKCounts[:kmer,:,:],saveKStrs[:kmer,:,:]
+
 
 if __name__ == '__main__':
-
     sequenceFile = "./data/GCA_000027325.1_ASM2732v1_genomic_sequence.txt"
     with open(sequenceFile) as f:
         sequence = f.read().strip().upper()
@@ -81,7 +92,20 @@ if __name__ == '__main__':
     baseProps = pCheckUtil.getCheckpoint('./tmp/proportions.npz',\
                             getProportions,False,sequence,seqComplement)
     printProportions(baseProps)
+    topKmers = 50
     # lazy way of making the sequence circularized
-    kmer,saveKs = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
-                                           False,sequence,seqComplement)
-
+    kmer,counts,kmerStr = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
+                                                   False,sequence,seqComplement,
+                                                   topKmers)
+    kCountFlat = np.reshape(counts,(kmer,2*topKmers))
+    maxOccurences = np.amax(kCountFlat,axis=1)
+    fig = pPlotUtil.figure()
+    kmerArr = np.arange(start=1,stop=kmer+1,step=1) # go from 0 to the kmer
+    plt.semilogy(kmerArr,maxOccurences,'ro-')
+    plt.axvline(kmer,linestyle='--',
+                label='k-mers occur at most once when k={:d}'.format(kmer))
+    plt.xlabel('kmer value')
+    plt.ylabel('max number of appearances of any specific kmer')
+    plt.title('Distribution of max appearances vs k is long-tailed')
+    plt.legend(loc='best')
+    pPlotUtil.savefig(fig,"./out/q9_and_q10")
