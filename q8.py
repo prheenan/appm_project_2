@@ -99,6 +99,16 @@ def plotError(expected,actual,xV,xlab,ylab,title,ax,relative=False):
     plt.xlabel(xlab)
     ax.set_xscale('log')
 
+#function to return pairs (F(k), P(k)) for each pmf of K represented in kArr
+def probPairs(kArr, ks):
+  r = []
+  for (l,k) in zip(kArr,ks):
+    tot = float(len(l))
+    F = [x for x in l if x <= k]
+    P = [x for x in F if x == k]
+    r.append((len(F)/tot, len(P)/tot))
+  return r
+
 if __name__ == '__main__':
     table = [ ['A','G','C','T'],
               [0.1,0.4,0.2,0.3]]
@@ -139,5 +149,8 @@ if __name__ == '__main__':
     ax = plt.subplot(1,3,3)
     plotError(meanVals,tKVals,lengths,xLab,'Relative Error in Mean K [0-->1]',
               'Relative error in Mean K',ax,relative=True)
-    pPlotUtil.savefig(fig,outDir + 'k_v_len')
+    #pPlotUtil.savefig(fig,outDir + 'k_v_len')
+    #plotAll(kArr, outDir)
+    print(probPairs(kArr, tKVals))
+    
 
