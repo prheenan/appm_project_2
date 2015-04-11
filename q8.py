@@ -35,7 +35,7 @@ def getMinK(seqs,printProgress=False):
     kmer = 1
     while (kNotFoundNum > 0):
         kmer,kNotFoundNum,bestIdx = getMinKIdxAndCount(seqs,kmer,goodIdx,
-                                                       printProgress)
+                                    printProgress=printProgress)
         arrK[bestIdx] = kmer
         goodIdx =np.where(arrK < 0)[0]
     return arrK
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     q = max(weights)
     # use for easy python string generation
     numOligos = 10e3
-    lengths = np.array([2,4,8,16,32,64,128,256,512,1024])
+    lengths = np.array([2,4,8,16,32,64,128,256,512])
     # save the K array: minimum k to have at most one k-mer
     # initialize to -1, so that we know when we have the minimum
     outDir = "./out/"
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     kArr = pCheckUtil.getCheckpoint('./tmp/check.pkl',getKSequence,forceRun,
                                     lengths,numOligos,weights,chars)
     meanVals,std = pCheckUtil.getCheckpoint('./tmp/meanStd.pkl',plotAll,
-                                            True,kArr,outDir)
+                                            forceRun,kArr,outDir)
     if (test):
         testDnaGeneration(chars,lengths,numOligos,weights)
     # plot the mean k vs dna length, l (in theory, k is approx log_1/q(l+1))
@@ -139,7 +139,5 @@ if __name__ == '__main__':
     ax = plt.subplot(1,3,3)
     plotError(meanVals,tKVals,lengths,xLab,'Relative Error in Mean K [0-->1]',
               'Relative error in Mean K',ax,relative=True)
-
-
     pPlotUtil.savefig(fig,outDir + 'k_v_len')
 

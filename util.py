@@ -3,20 +3,17 @@ import numpy as np
 
 def getKmers(string,kV):
     return [ string[i:i+kV] for i in range(0,len(string)-kV+1)]
-    
-def getMinKIdxAndCount(seqs,kmer,goodIdx,returnKmers=None,printProgress=True):
-    # returnKmers: if not none, returns this many (including -1, all)
-    # of the kmers found 
+
+def getCounters(seqs,kmer,goodIdx):
     working = seqs[goodIdx]
     # transform the dna into their kmers. Use a counter structure, 
     # which is much faster. it stored the unique elements and counts
 # see: https://docs.python.org/2/library/collections.html#collections.Counter
-    counters = map(lambda x: Counter(getKmers(x,kmer)),working)
-    # get the set of each of the kmers, using the unique set of the counters
-# see: https://docs.python.org/2/library/collections.html#collections.Counter
-    # For each counter, get all its elements (most common defaults to n)
-    # and record the count (second element, first index)
-# see: https://docs.python.org/2/library/collections.html#collections.Counter
+    return map(lambda x: Counter(getKmers(x,kmer)),working)
+
+def getMinKFromCounters(counters,kmer,goodIdx,returnKmers=None,
+                        printProgress=True):
+    # assuming 'counters' is a counter object with each {kmer : count} as a dict
     kmerDat = [ tmpSet.most_common() for tmpSet in counters ]
     kmerSet = map(lambda x: [item[0] for item in x],kmerDat)
     kmerCounts = map(lambda x: [item[1] for item in x],kmerDat)
@@ -38,3 +35,14 @@ def getMinKIdxAndCount(seqs,kmer,goodIdx,returnKmers=None,printProgress=True):
     else:
         # also return the data the the 'returnKmers' most common ones.
         return kmer,kNotFoundNum,bestIdx,kmerDat[0][:returnKmers]
+
+def getMinKIdxAndCount(seqs,kmer,goodIdx,returnKmers=None,printProgress=True):
+    # returnKmers: if not none, returns this many (including -1, all)
+    # of the kmers found 
+    # get the set of each of the kmers, using the unique set of the counters
+# see: https://docs.python.org/2/library/collections.html#collections.Counter
+    counters = getCounters(seqs,kmer,goodIdx)
+    # For each counter, get all its elements (most common defaults to n)
+    # and record the count (second element, first index)
+# see: https://docs.python.org/2/library/collections.html#collections.Counter
+    return getMinKFromCounters(counters,kmer,goodIdx,returnKmers,printProgress)
