@@ -15,7 +15,7 @@ sys.path.append(path)
 import GenUtilities  as pGenUtil
 import PlotUtilities as pPlotUtil
 import CheckpointUtilities as pCheckUtil
-from util import getMinKIdxAndCount
+from util import getCounters,getMinKFromCounters
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -47,40 +47,27 @@ def findKmers(sequence,seqComplement,topKmers=10):
     circular = lambda seq ,k: seq + seq[:(k-1)] if k > 1 else seq
     goodIdx =np.array([0])
     kNotFound = 1
-    avgKmerCountS1 = []
-    avgKmerCountS2 = []
-    # kmers to save each round
-    # maximum numbers of rounds to save
-    maxK = 300
+    savedKmerCount = []
     # for each round [i] and both sequences [j],  store the top kmers [k]
-    saveKCounts = np.ones((maxK,2,topKmers),dtype=np.uint64) * -1
-    saveKStrs = np.empty((maxK,2,topKmers),dtype=np.object)
-    # little lambda functions to make populating things easier
-    realLen = lambda arr: min(topKmers,len(arr))
-    toStr = lambda arr: [ x[0] for x in arr ]
-    toCount = lambda arr: [ x[1] for x in arr]
     while (kNotFound >0):
         kmer += 1
         s1 = circular(sequence,kmer)
         s2 = circular(seqComplement,kmer)
-        # need to pass an array to minK..
-        xx,notFoundS1,xx,commonKmers1 = getMinKIdxAndCount([[s1]],kmer,goodIdx,
-                                                          topKmers)
-        xx,notFoundS2,xx,commonKmers2 = getMinKIdxAndCount([[s2]],kmer,goodIdx,
-                                                          topKmers)
-        idx = kmer-1
-        saveKCounts[idx,0,:realLen(commonKmers1)] = toCount(commonKmers1)
-        saveKCounts[idx,1,:realLen(commonKmers2)] = toCount(commonKmers2)
-        # save the actual strings
-        saveKStrs[idx,0,:realLen(commonKmers1)] = toStr(commonKmers1)
-        saveKStrs[idx,1,:realLen(commonKmers2)] = toStr(commonKmers2)
-        # continue going until both the forward and reverse sequences satistfy
-        kNotFound = max(notFoundS1,notFoundS2)
-        # keep arrK at -1 if either sequences don't have the K yet.
+        # get a dictionary like 'kmer:count'
+        forwardCountDict = getCounters([[s1]],kmer,goodIdx)
+        reverseCountDict = getCounters([[s2]],kmer,goodIdx)
+        # combine the dictonaries (w00t python ease of use)
+        # so if we have 'AAA:2' in the forward and 'AAA:3' in the revse,
+        # combined will have 'AAA:5'.
+# see: http://stackoverflow.com/questions/19356055/summing-the-contents-of-two-collections-counter-objects
+        combinedDict = forwardCountDict[0]+reverseCountDict[0]
+        xx,kNotFound,xx,commonKmers =getMinKFromCounters([combinedDict],kmer,
+                                goodIdx,returnKmers=topKmers,printProgress=True)
+        savedKmerCount.append(commonKmers)
     # POST: kmer is the minimum k such that no k-mer appears more than once
     # go up to but not including the kmer we found; this gets up the last 
     # k for which we had more than one k-mer in the sequence
-    return kmer,saveKCounts[:kmer,:,:],saveKStrs[:kmer,:,:]
+    return kmer,savedKmerCount
 
 
 if __name__ == '__main__':
@@ -94,14 +81,14 @@ if __name__ == '__main__':
     printProportions(baseProps)
     topKmers = 50
     # lazy way of making the sequence circularized
-    kmer,counts,kmerStr = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
+    kmer,savedKmerCount = pCheckUtil.getCheckpoint('./tmp/minK.pkl',findKmers,
                                                    False,sequence,seqComplement,
                                                    topKmers)
-    kCountFlat = np.reshape(counts,(kmer,2*topKmers))
-    maxOccurences = np.amax(kCountFlat,axis=1)
+    counts = map(lambda x : [a[1] for a in x],savedKmerCount)
+    maxOccurences = map(max,counts)
     fig = pPlotUtil.figure()
     kmerArr = np.arange(start=1,stop=kmer+1,step=1) # go from 0 to the kmer
-    plt.semilogy(kmerArr,maxOccurences,'ro-')
+    plt.loglog(kmerArr,maxOccurences,'ro-')
     plt.axvline(kmer,linestyle='--',
                 label='k-mers occur at most once when k={:d}'.format(kmer))
     plt.xlabel('kmer value')

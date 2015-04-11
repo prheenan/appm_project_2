@@ -9,7 +9,7 @@ def getCounters(seqs,kmer,goodIdx):
     # transform the dna into their kmers. Use a counter structure, 
     # which is much faster. it stored the unique elements and counts
 # see: https://docs.python.org/2/library/collections.html#collections.Counter
-    return map(lambda x: Counter(getKmers(x,kmer)),working)
+    return [ Counter(getKmers(x,kmer)) for x in working]
 
 def getMinKFromCounters(counters,kmer,goodIdx,returnKmers=None,
                         printProgress=True):
@@ -20,6 +20,7 @@ def getMinKFromCounters(counters,kmer,goodIdx,returnKmers=None,
     # maximum count (ie: the maximum number of times *any* kmer happens
     # this needs to be 1 to find the appropriate value...
     maxCount = map(max,kmerCounts)
+
     # get the index where the max was one (ie: at most 1 of the kmers)
     bestIdx = [ goodIdx[i] for i,c in enumerate(maxCount)  if c<=1]
     # update the bookkeeping stuff; of the originals (goodIdx.size), how many
